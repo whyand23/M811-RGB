@@ -1,0 +1,19 @@
+# build outputs
+*.o
+*.out
+*.exe
+main
+build/
+dist/
+docs/
+config/
+
+# vscode settings
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# libs downloaded locally
+vendor/

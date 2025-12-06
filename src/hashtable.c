@@ -6,7 +6,7 @@ static unsigned int hash(const char *key)
     unsigned int key_len = strlen(key);
 
     // hash formula
-    for(int i = 0; i < key_len; i++) {
+    for(unsigned int i = 0; i < key_len; i++) {
         value = value * 37 + key[i];
     }
 

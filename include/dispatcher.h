@@ -26,6 +26,6 @@ typedef struct {
 } option;
 
 void dispatch(command_t *commands, int cmdcount, int argc, char **argv, int mode);
-void sub_dispatch(option *sub_opts, int count, mouse_config *opts, int argc, char **argv, int mode);
+void sub_dispatch(option *sub_opts, int count, mouse_config *opts, int argc, char **argv);
 
 #endif

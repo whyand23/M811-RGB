@@ -1,7 +1,7 @@
 #include "dispatcher.h"
 
 // sub dispatcher for optional option
-void sub_dispatch(option *sub_opts, int count, mouse_config *opts, int argc, char **argv, int mode) 
+void sub_dispatch(option *sub_opts, int count, mouse_config *opts, int argc, char **argv)
 {
     int i = 0;
     // i for argc while j are for the subcommands matching

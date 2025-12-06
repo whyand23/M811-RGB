@@ -24,12 +24,6 @@ command_t led_sub[8] =  {
     {"off", set_light_off, "Set LED to Off", NULL, 0}
 };
 
-void led_main(int argc, char **argv, int mode) 
-{
-    // ts is so ass , i need to remove the whole function
-    printf("If you end up here that means i need to print help %d\n", mode);
-}
-
 // parsing input string to hex
 static void parse_rgb(mouse_config *opts, int argc, char **argv) 
 {
@@ -127,7 +121,7 @@ void set_light_breathing(int argc, char **argv, int mode)
     temp_cfg.mod2 = 0x4;
 
     // calling breathing subcommands
-    sub_dispatch(breathing_option, ARRAY_SIZE(breathing_option), &temp_cfg, argc, argv, mode);
+    sub_dispatch(breathing_option, ARRAY_SIZE(breathing_option), &temp_cfg, argc, argv);
 
     //copying data changed in temp_cfg to mouse_config modes array
     set_mode_config(mode - 1, &temp_cfg);
@@ -142,7 +136,7 @@ void set_light_breathing(int argc, char **argv, int mode)
     // building array packets with new setting & cfg file
     led_packets_build(all_mode);
 
-    for(int i = 0; i < ARRAY_SIZE(led_packets); i++)
+    for(size_t i = 0; i < ARRAY_SIZE(led_packets); i++)
     {
         transfer(led_packets[i]);
     }
@@ -172,7 +166,7 @@ void set_light_lighted(int argc, char **argv, int mode)
     temp_cfg.speed = 0x0;
 
     // calling breathing subcommands
-    sub_dispatch(full_lighted_option, ARRAY_SIZE(full_lighted_option), &temp_cfg, argc, argv, mode);
+    sub_dispatch(full_lighted_option, ARRAY_SIZE(full_lighted_option), &temp_cfg, argc, argv);
 
     //copying data changed in temp_cfg to mouse_config modes array
     set_mode_config(mode - 1, &temp_cfg);
@@ -186,7 +180,7 @@ void set_light_lighted(int argc, char **argv, int mode)
     // building array packets with new setting & cfg file
     led_packets_build(all_mode);
 
-    for(int i = 0; i < ARRAY_SIZE(led_packets); i++)
+    for(size_t i = 0; i < ARRAY_SIZE(led_packets); i++)
     {
         transfer(led_packets[i]);
     }
@@ -218,7 +212,7 @@ void set_light_rainbow(int argc, char **argv, int mode)
     temp_cfg.b = 0x0;
 
     // calling breathing subcommands
-    sub_dispatch(rainbow_option, ARRAY_SIZE(rainbow_option), &temp_cfg, argc, argv, mode);
+    sub_dispatch(rainbow_option, ARRAY_SIZE(rainbow_option), &temp_cfg, argc, argv);
 
     //copying data changed in temp_cfg to mouse_config modes array
     set_mode_config(mode - 1, &temp_cfg);
@@ -232,7 +226,7 @@ void set_light_rainbow(int argc, char **argv, int mode)
     // building array packets with new setting & cfg file
     led_packets_build(all_mode);
 
-    for(int i = 0; i < ARRAY_SIZE(led_packets); i++)
+    for(size_t i = 0; i < ARRAY_SIZE(led_packets); i++)
     {
         transfer(led_packets[i]);
     }
@@ -264,7 +258,7 @@ void set_light_wave(int argc, char **argv, int mode)
     temp_cfg.b = 0x0;
 
     // calling breathing subcommands
-    sub_dispatch(wave_option, ARRAY_SIZE(wave_option), &temp_cfg, argc, argv, mode);
+    sub_dispatch(wave_option, ARRAY_SIZE(wave_option), &temp_cfg, argc, argv);
 
     //copying data changed in temp_cfg to mouse_config modes array
     set_mode_config(mode - 1, &temp_cfg);
@@ -278,7 +272,7 @@ void set_light_wave(int argc, char **argv, int mode)
     // building array packets with new setting & cfg file
     led_packets_build(all_mode);
 
-    for(int i = 0; i < ARRAY_SIZE(led_packets); i++)
+    for(size_t i = 0; i < ARRAY_SIZE(led_packets); i++)
     {
         transfer(led_packets[i]);
     }
@@ -310,7 +304,7 @@ void set_light_trace(int argc, char **argv, int mode)
     temp_cfg.b = 0x0;
 
     // calling breathing subcommands
-    sub_dispatch(trace_option, ARRAY_SIZE(trace_option), &temp_cfg, argc, argv, mode);
+    sub_dispatch(trace_option, ARRAY_SIZE(trace_option), &temp_cfg, argc, argv);
 
     //copying data changed in temp_cfg to mouse_config modes array
     set_mode_config(mode - 1, &temp_cfg);
@@ -324,7 +318,7 @@ void set_light_trace(int argc, char **argv, int mode)
     // building array packets with new setting & cfg file
     led_packets_build(all_mode);
 
-    for(int i = 0; i < ARRAY_SIZE(led_packets); i++)
+    for(size_t i = 0; i < ARRAY_SIZE(led_packets); i++)
     {
         transfer(led_packets[i]);
     }
@@ -356,7 +350,7 @@ void set_light_reactive(int argc, char **argv, int mode)
     temp_cfg.b = 0x0;
 
     // calling breathing subcommands
-    sub_dispatch(reactive_option, ARRAY_SIZE(reactive_option), &temp_cfg, argc, argv, mode);
+    sub_dispatch(reactive_option, ARRAY_SIZE(reactive_option), &temp_cfg, argc, argv);
 
     //copying data changed in temp_cfg to mouse_config modes array
     set_mode_config(mode - 1, &temp_cfg);
@@ -370,7 +364,7 @@ void set_light_reactive(int argc, char **argv, int mode)
     // building array packets with new setting & cfg file
     led_packets_build(all_mode);
 
-    for(int i = 0; i < ARRAY_SIZE(led_packets); i++)
+    for(size_t i = 0; i < ARRAY_SIZE(led_packets); i++)
     {
         transfer(led_packets[i]);
     }
@@ -400,7 +394,7 @@ void set_light_flash(int argc, char **argv, int mode)
     temp_cfg.mod2 = 0x10;
 
     // calling breathing subcommands
-    sub_dispatch(reactive_option, ARRAY_SIZE(reactive_option), &temp_cfg, argc, argv, mode);
+    sub_dispatch(reactive_option, ARRAY_SIZE(reactive_option), &temp_cfg, argc, argv);
 
     //copying data changed in temp_cfg to mouse_config modes array
     set_mode_config(mode - 1, &temp_cfg);
@@ -414,7 +408,7 @@ void set_light_flash(int argc, char **argv, int mode)
     // building array packets with new setting & cfg file
     led_packets_build(all_mode);
 
-    for(int i = 0; i < ARRAY_SIZE(led_packets); i++)
+    for(size_t i = 0; i < ARRAY_SIZE(led_packets); i++)
     {
         transfer(led_packets[i]);
     }
@@ -426,8 +420,8 @@ void set_light_flash(int argc, char **argv, int mode)
 void set_light_off(int argc, char **argv, int mode)
 {
     printf("Changing LED mode to OFF\n");
-    if(argc <= 0) {
-        printf("No further command is given, default values for options will not be changed\n");
+    if(argc <= 0 || argv[0]) {
+        printf("No further command needed for OFF bruh\n");
     }
 
     // get current mode settings
@@ -449,7 +443,7 @@ void set_light_off(int argc, char **argv, int mode)
     // building array packets with new setting & cfg file
     led_packets_build(all_mode);
 
-    for(int i = 0; i < ARRAY_SIZE(led_packets); i++)
+    for(size_t i = 0; i < ARRAY_SIZE(led_packets); i++)
     {
         transfer(led_packets[i]);
     }

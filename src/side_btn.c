@@ -293,7 +293,7 @@ void side_btn_key(int argc, char **argv, int mode)
     }
 
     unsigned long side_btn = strtoul(argv[0], NULL, 10);
-    if(side_btn < 0 || side_btn > 8) {
+    if(side_btn > 8) {
         fprintf(stderr, "Side button should be 1-8\n");
         return;
     }
@@ -342,12 +342,4 @@ void side_btn_key(int argc, char **argv, int mode)
     };
 
     return;
-}
-
-void side_btn_main(int argc, char **argv, int mode) 
-{
-	// arghh i need to delete this function and its calling to it
-	// something need to be changed
-	// probably i need to make olny main fn can exec the sub instead?
-	// so if command arent found i can print help
 }

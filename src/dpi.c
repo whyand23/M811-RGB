@@ -204,7 +204,7 @@ void dpi_main(int argc, char **argv, int mode)
 
     unsigned long dpi_level = strtoul(argv[1], NULL, 10);
 
-    if(dpi_level < 0 || dpi_level > 5) {
+    if(dpi_level > 5) {
         fprintf(stderr, "DPI level should be 1-5\n");
         return;
     }

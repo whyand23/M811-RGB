@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.14)
+cmake_minimum_required(VERSION 3.27)
 project(M811RGB C)
 set(CMAKE_BUILD_TYPE Debug)
 add_compile_options(-g -Wall)
@@ -14,10 +14,25 @@ set(CMAKE_C_EXTENSIONS OFF)
 # ============================================================
 # Raylib (built from vendor/)
 # ============================================================
-set(BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
-set(BUILD_GAMES OFF CACHE BOOL "" FORCE)
-add_subdirectory(vendor/raylib)
+#set(BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+#set(BUILD_GAMES OFF CACHE BOOL "" FORCE)
+#add_subdirectory(vendor/raylib)
 
+# Adding Raylib
+include(FetchContent)
+set(FETCHCONTENT_QUIET FALSE)
+set(BUILD_EXAMPLES OFF CACHE BOOL "" FORCE) # don't build the supplied examples
+set(BUILD_GAMES    OFF CACHE BOOL "" FORCE) # don't build the supplied example games
+
+FetchContent_Declare(
+    raylib
+    GIT_REPOSITORY "https://github.com/raysan5/raylib.git"
+    GIT_TAG "5.5"
+    GIT_PROGRESS TRUE
+    GIT_SHALLOW TRUE
+)
+
+FetchContent_MakeAvailable(raylib)
 
 # ============================================================
 # System libusb
@@ -32,7 +47,7 @@ pkg_check_modules(LIBUSB REQUIRED libusb-1.0)
 include_directories(
     include
     vendor/clay
-    vendor/raylib/src
+    vendor/raylib
     ${LIBUSB_INCLUDE_DIRS}
 )
 
@@ -64,10 +79,18 @@ target_link_libraries(M811-RGB
 
 
 # ============================================================
-# Warning Flags
+# Warning Flags / cusotom commands
 # ============================================================
 target_compile_options(M811-RGB PRIVATE
     -Wall
-    -Wextra
     -Werror
 )
+
+target_include_directories(M811-RGB PUBLIC .)
+
+# for copying resource file to build folder
+# add_custom_command(
+#         TARGET M811-RGB POST_BUILD
+#         COMMAND ${CMAKE_COMMAND} -E copy_directory
+#         ${CMAKE_CURRENT_SOURCE_DIR}/resources
+#         ${CMAKE_CURRENT_BINARY_DIR}/resources)

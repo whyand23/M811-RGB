@@ -4,12 +4,14 @@
 #include "led.h"
 #include "side_btn.h"
 
-#include "raylib.h"
 #include <stdbool.h>
 #include <stdint.h>
+#include <string.h>
+
 #define CLAY_IMPLEMENTATION
 #include "clay.h"
-#include "clay_renderer_raylib.c"
+// my autoformatter kept swapping include order
+#include "../vendor/clay/renderers/raylib/clay_renderer_raylib.c"
 
 #define ARRAY_SIZE(arr) sizeof(arr) / sizeof(arr[0])
 
@@ -30,6 +32,52 @@ static libusb_context *context =
     0;                  // init to 0 Struct representing a libusb session.
 static int errcode = 0; // libusb will return 0 on sucess
 
+// for assigning to the ClayRaylibFonts struct
+Font fonts[2];
+const int fontCount = 2;
+
+// Stuct that will be used for measure text
+typedef struct {
+  Font *fonts;
+  int fontCount;
+} ClayRaylibFonts;
+
+// Clay requirement, measure text
+Clay_Dimensions RaylibMeasureText(Clay_StringSlice slice,
+                                  Clay_TextElementConfig *config,
+                                  void *userData) {
+  ClayRaylibFonts *ctx = (ClayRaylibFonts *)userData;
+
+  int fontId = config->fontId;
+  float fontSize = config->fontSize;
+  float spacing = config->letterSpacing;
+
+  // Safety fallback font
+  if (fontId < 0 || fontId >= ctx->fontCount) {
+    fontId = 0;
+  }
+
+  Font font = ctx->fonts[fontId];
+
+  // Convert Clay_StringSlice to NULL terminated string
+  int len = slice.length;
+  char buffer[4096];
+  if (len >= 4095)
+    len = 4095;
+  memcpy(buffer, slice.chars, len);
+  buffer[len] = '\0';
+
+  // Raylib measurement
+  Vector2 m = MeasureTextEx(font, buffer, fontSize, spacing);
+
+  Clay_Dimensions dim;
+  dim.width = m.x;
+  dim.height = m.y;
+
+  return dim;
+}
+
+// App resolution (fixed)
 const float ScreenWidth = 896.0f;
 const float ScreenHeight = 504.0f;
 
@@ -47,68 +95,91 @@ int transfer(unsigned char *packets) {
   return 1;
 }
 
+// Handling all clay error
 void errorHandlerFunc(Clay_ErrorData errorText) {
   printf("An Error Occured%s", errorText.errorText.chars);
 }
 
-Clay_RenderCommandArray build_layout(void) {
+Clay_RenderCommandArray build_layout() {
 
-  // Main app loop
   Clay_BeginLayout();
 
-  CLAY(CLAY_ID("Main"), {.layout = {.sizing = {.width = CLAY_SIZING_GROW(),
-                                               .height = CLAY_SIZING_GROW()},
-                                    .padding = CLAY_PADDING_ALL(16),
-                                    .childGap = 16,
-                                    .layoutDirection = CLAY_TOP_TO_BOTTOM},
-                         .backgroundColor = {20, 120, 240, 255}}) {
+  // Image
+  Texture2D header = LoadTexture("resources/img/header.png");
 
-    CLAY(CLAY_ID("Header"),
-         {.layout = {.sizing = {.width = CLAY_SIZING_GROW(),
-                                .height = CLAY_SIZING_FIXED(50)},
-                     .childAlignment = {CLAY_ALIGN_X_CENTER,
-                                        CLAY_ALIGN_Y_CENTER},
-                     .childGap = 16,
-                     .padding = CLAY_PADDING_ALL(16)},
-          .backgroundColor = {255, 0, 0, 255}}) {
-      // grand children go here
+  // ROOT
+  CLAY(.wrapped = {
+           .id = CLAY_ID("Root"),
+           .layout = {.sizing = {CLAY_SIZING_GROW(), CLAY_SIZING_GROW()},
+                      .padding = CLAY_PADDING_ALL(10),
+                      .childGap = 5,
+                      .layoutDirection = CLAY_TOP_TO_BOTTOM},
+           .backgroundColor = {17, 17, 17, 255}}) {
+
+    // HEADER
+    CLAY(.wrapped = {
+             .id = CLAY_ID("Header"),
+             .image = {.imageData = &header},
+             .aspectRatio = {(float)header.width / (float)header.height},
+             .backgroundColor = {255, 255, 255, 0},
+             .layout = {
+                 .sizing = {CLAY_SIZING_GROW(), CLAY_SIZING_FIXED(20)},
+                 .childAlignment = {CLAY_ALIGN_X_LEFT, CLAY_ALIGN_Y_CENTER},
+                 .childGap = 16,
+                 .padding = CLAY_PADDING_ALL(16)}}) {
+
+      CLAY_TEXT(CLAY_STRING("M811-RGB"),
+                CLAY_TEXT_CONFIG({
+                    .fontId = 1,
+                    .fontSize = 24,
+                    .textColor = {255, 255, 255, 255},
+                    .textAlignment = CLAY_TEXT_ALIGN_LEFT,
+                }));
     }
 
-    CLAY(CLAY_ID("Middle"),
-         {.layout = {.sizing = {.width = CLAY_SIZING_GROW(),
-                                .height = CLAY_SIZING_GROW()},
-                     .padding = CLAY_PADDING_ALL(16),
-                     .childGap = 16,
-                     .layoutDirection = CLAY_LEFT_TO_RIGHT},
-          .backgroundColor = {200, 0, 0, 255}}) {
+    // MIDDLE
+    CLAY(.wrapped = {
+             .id = CLAY_ID("Middle"),
+             .layout = {.sizing = {CLAY_SIZING_GROW(), CLAY_SIZING_GROW()},
+                        .padding = CLAY_PADDING_ALL(16),
+                        .childGap = 16,
+                        .layoutDirection = CLAY_LEFT_TO_RIGHT},
+             .backgroundColor = {200, 0, 0, 0},
+             .border = {.color = {85, 85, 85, 255},
+                        .width = {0, 0, 2, 2, 1}}}) {
 
-      CLAY(CLAY_ID("LeftContainer"),
-           {.layout = {.sizing = {.width = CLAY_SIZING_FIXED(300),
-                                  CLAY_SIZING_GROW()},
-                       .layoutDirection = CLAY_TOP_TO_BOTTOM},
-            .backgroundColor = {255, 0, 0, 255}}) {}
+      // LEFT CONTAINER
+      CLAY(.wrapped = {.id = CLAY_ID("LeftContainer"),
+                       .layout = {.sizing = {CLAY_SIZING_FIXED(300),
+                                             CLAY_SIZING_GROW()},
+                                  .layoutDirection = CLAY_TOP_TO_BOTTOM},
+                       .backgroundColor = {190, 0, 0, 255}}) {}
 
-      CLAY(CLAY_ID("RightContainer"),
-           {.layout = {.sizing = {.width = CLAY_SIZING_GROW(),
-                                  CLAY_SIZING_GROW()},
-                       .layoutDirection = CLAY_TOP_TO_BOTTOM},
-            .backgroundColor = {255, 0, 0, 255}}) {}
+      // RIGHT CONTAINER
+      CLAY(.wrapped = {
+               .id = CLAY_ID("RightContainer"),
+               .layout = {.sizing = {CLAY_SIZING_GROW(), CLAY_SIZING_GROW()},
+                          .layoutDirection = CLAY_TOP_TO_BOTTOM},
+               .backgroundColor = {190, 0, 0, 255}}) {}
     }
 
-    CLAY(CLAY_ID("Footer"),
-         {.layout = {.sizing = {.width = CLAY_SIZING_GROW(),
-                                .height = CLAY_SIZING_FIXED(200)},
-                     .childAlignment = {CLAY_ALIGN_X_CENTER,
-                                        CLAY_ALIGN_Y_CENTER},
-                     .childGap = 16,
-                     .padding = CLAY_PADDING_ALL(16)},
-          .backgroundColor = {255, 0, 0, 255}}) {
-      // grand children go here
+    // FOOTER
+    CLAY(.wrapped = {
+             .id = CLAY_ID("Footer"),
+             .layout = {.sizing = {CLAY_SIZING_GROW(), CLAY_SIZING_FIXED(30)},
+                        .childAlignment = {CLAY_ALIGN_X_CENTER,
+                                           CLAY_ALIGN_Y_CENTER},
+                        .childGap = 16,
+                        .padding = CLAY_PADDING_ALL(16)},
+             .backgroundColor = {190, 0, 0, 255}}) {
+      // children go here
     }
-    // childern go here
-  }
+
+  } // end Main
+
   return Clay_EndLayout();
 }
+
 int main(int argc, char **argv) {
   // if(argc <= 3) {
   //     printf("bla bla bla");
@@ -207,6 +278,18 @@ int main(int argc, char **argv) {
   Clay_Initialize(memoryArena, dimensions,
                   (Clay_ErrorHandler){errorHandlerFunc});
 
+  // init font(s)
+  fonts[1] = LoadFont("resources/promptfont.ttf");
+  fonts[0] = GetFontDefault();
+
+  // Init ClayRaylibFonts with pointing it to
+  // font array and int count
+  ClayRaylibFonts clayFontsCtx = {.fonts = fonts, .fontCount = fontCount};
+
+  // Setting up Clay_SetMeasureTextFunction
+  Clay_SetMeasureTextFunction(&RaylibMeasureText, &clayFontsCtx);
+
+  // Main UI loop
   while (!WindowShouldClose()) {
     // Get Delta time
     float delta_time = GetFrameTime();
@@ -222,10 +305,12 @@ int main(int argc, char **argv) {
     // Build clay layout
     Clay_RenderCommandArray renderCommands = build_layout();
 
+    printf("Working directory: %s\n", GetWorkingDirectory());
+    printf("Exists? %d\n", FileExists("resources/img/header.png"));
+
     // Render Stuff
     BeginDrawing();
-    Font defaultFont = GetFontDefault();
-    Clay_Raylib_Render(renderCommands, &defaultFont);
+    Clay_Raylib_Render(renderCommands, fonts);
     EndDrawing();
   }
 

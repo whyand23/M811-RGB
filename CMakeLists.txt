@@ -88,9 +88,12 @@ target_compile_options(M811-RGB PRIVATE
 
 target_include_directories(M811-RGB PUBLIC .)
 
-# for copying resource file to build folder
-# add_custom_command(
-#         TARGET M811-RGB POST_BUILD
-#         COMMAND ${CMAKE_COMMAND} -E copy_directory
-#         ${CMAKE_CURRENT_SOURCE_DIR}/resources
-#         ${CMAKE_CURRENT_BINARY_DIR}/resources)
+#for copying resource file to build folder
+# Copy resources (images, fonts, etc.) into the output directory
+add_custom_command(TARGET M811-RGB POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+            ${CMAKE_SOURCE_DIR}/resources
+            $<TARGET_FILE_DIR:M811-RGB>/resources
+
+) # For exporting compile_commands.json
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)

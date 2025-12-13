@@ -6,6 +6,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <string.h>
 
 #define CLAY_IMPLEMENTATION
@@ -26,13 +27,15 @@
 #define wValue 0x0302
 #define wIndex 2
 
+Clay_Color ColorButtonHover = {255, 255, 255, 255};
+Clay_Color ColorButton = {0, 0, 0, 255};
+
 static libusb_device_handle *device =
     0; // init to 0 Struct representing a handle on a USB device.
 static libusb_context *context =
     0;                  // init to 0 Struct representing a libusb session.
 static int errcode = 0; // libusb will return 0 on sucess
 
-// for assigning to the ClayRaylibFonts struct
 Font fonts[2];
 const int fontCount = 2;
 
@@ -81,6 +84,133 @@ Clay_Dimensions RaylibMeasureText(Clay_StringSlice slice,
 const float ScreenWidth = 896.0f;
 const float ScreenHeight = 504.0f;
 
+typedef enum { TEST, PAGE_LED, PAGE_DPI, PAGE_SBTN } Page;
+
+Page currentPage = PAGE_DPI;
+
+void test_btn(void) { currentPage = TEST; }
+void led_btn(void) { currentPage = PAGE_LED; }
+void dpi_btn(void) { currentPage = PAGE_DPI; }
+void sbtn_btn(void) { currentPage = PAGE_SBTN; }
+
+void draw_led_screen(void) {
+  CLAY(
+      {.layout = {.sizing = {.width = CLAY_SIZING_GROW(),
+                             .height = CLAY_SIZING_GROW()},
+                  .childAlignment = {CLAY_ALIGN_X_CENTER, CLAY_ALIGN_Y_CENTER}},
+       .backgroundColor = Clay_Hovered() ? ColorButtonHover : ColorButton}) {
+
+    CLAY_TEXT(
+        CLAY_STRING("LED"),
+        CLAY_TEXT_CONFIG(
+            {.fontId = 1, .fontSize = 16, .textColor = {255, 255, 255, 255}}));
+  }
+}
+
+void draw_dpi_screen(void) {
+  CLAY(
+      {.layout = {.sizing = {.width = CLAY_SIZING_GROW(),
+                             .height = CLAY_SIZING_GROW()},
+                  .childAlignment = {CLAY_ALIGN_X_CENTER, CLAY_ALIGN_Y_CENTER}},
+       .backgroundColor = Clay_Hovered() ? ColorButtonHover : ColorButton}) {
+
+    CLAY_TEXT(
+        CLAY_STRING("DPI"),
+        CLAY_TEXT_CONFIG(
+            {.fontId = 1, .fontSize = 16, .textColor = {255, 255, 255, 255}}));
+  }
+}
+
+void draw_sbtn_screen(void) {
+  CLAY(
+      {.layout = {.sizing = {.width = CLAY_SIZING_GROW(),
+                             .height = CLAY_SIZING_GROW()},
+                  .childAlignment = {CLAY_ALIGN_X_CENTER, CLAY_ALIGN_Y_CENTER}},
+       .backgroundColor = Clay_Hovered() ? ColorButtonHover : ColorButton}) {
+
+    CLAY_TEXT(
+        CLAY_STRING("SIDE BUTTONS"),
+        CLAY_TEXT_CONFIG(
+            {.fontId = 1, .fontSize = 16, .textColor = {255, 255, 255, 255}}));
+  }
+}
+
+void draw_test_screen(void) {
+  CLAY(
+      {.layout = {.sizing = {.width = CLAY_SIZING_GROW(),
+                             .height = CLAY_SIZING_GROW()},
+                  .childAlignment = {CLAY_ALIGN_X_CENTER, CLAY_ALIGN_Y_CENTER}},
+       .backgroundColor = Clay_Hovered() ? ColorButtonHover : ColorButton}) {
+
+    CLAY_TEXT(
+        CLAY_STRING("TEST"),
+        CLAY_TEXT_CONFIG(
+            {.fontId = 1, .fontSize = 16, .textColor = {255, 255, 255, 255}}));
+  }
+}
+
+typedef void (*ButtonCallback)(void);
+void handle_button_interaction(Clay_ElementId id, Clay_PointerData pointerInfo,
+                               intptr_t userData) {
+  if (pointerInfo.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME) {
+    ButtonCallback callback = (ButtonCallback)userData;
+    if (callback) {
+      callback();
+    }
+  }
+}
+
+typedef enum { MODE_1, MODE_2, MODE_3, MODE_4, MODE_5 } MouseMode;
+
+MouseMode currentMode = MODE_1;
+
+Clay_String MouseModeText(MouseMode input) {
+  switch (input) {
+  case MODE_1:
+    return CLAY_STRING("MODE 1");
+    break;
+  case MODE_2:
+    return CLAY_STRING("MODE 2");
+    break;
+  case MODE_3:
+    return CLAY_STRING("MODE 3");
+    break;
+  case MODE_4:
+    return CLAY_STRING("MODE 4");
+    break;
+  case MODE_5:
+    return CLAY_STRING("MODE 5");
+    break;
+  }
+  return CLAY_STRING("UNKNOWN");
+}
+
+void mode1_menu_func(void) { currentMode = MODE_1; }
+
+void mode2_menu_func(void) { currentMode = MODE_2; }
+
+void RenderDropdownMenuItem(Clay_String text, ButtonCallback callback) {
+  CLAY({.layout = {.padding = CLAY_PADDING_ALL(16)}}) {
+    Clay_OnHover(handle_button_interaction, (intptr_t)callback);
+    CLAY_TEXT(text, CLAY_TEXT_CONFIG({.fontId = 1,
+                                      .fontSize = 16,
+                                      .textColor = {255, 255, 255, 255}}));
+  }
+}
+
+void RenderFooterBtn(Clay_String text, ButtonCallback callback) {
+  CLAY(
+      {.layout = {.sizing = {.width = CLAY_SIZING_GROW(),
+                             .height = CLAY_SIZING_GROW()},
+                  .childAlignment = {CLAY_ALIGN_X_CENTER, CLAY_ALIGN_Y_CENTER}},
+       .backgroundColor = Clay_Hovered() ? ColorButtonHover : ColorButton}) {
+    Clay_OnHover(handle_button_interaction, (intptr_t)callback);
+    CLAY_TEXT(text, CLAY_TEXT_CONFIG({.fontId = 1,
+                                      .fontSize = 16,
+                                      .textColor = {255, 255, 255, 255}}));
+  }
+}
+
 // transfer from 1d array
 // return 1 on success, 0 on fail
 int transfer(unsigned char *packets) {
@@ -101,7 +231,6 @@ void errorHandlerFunc(Clay_ErrorData errorText) {
 }
 
 Clay_RenderCommandArray build_layout() {
-
   Clay_BeginLayout();
 
   // Image
@@ -153,14 +282,65 @@ Clay_RenderCommandArray build_layout() {
                        .layout = {.sizing = {CLAY_SIZING_FIXED(300),
                                              CLAY_SIZING_GROW()},
                                   .layoutDirection = CLAY_TOP_TO_BOTTOM},
-                       .backgroundColor = {190, 0, 0, 255}}) {}
+                       .backgroundColor = {190, 0, 0, 255}}) {
+        CLAY({.id = CLAY_ID("ModeSelect"),
+              .layout = {.childAlignment = {CLAY_ALIGN_X_CENTER,
+                                            CLAY_ALIGN_Y_CENTER},
+                         .sizing = {.width = CLAY_SIZING_GROW(),
+                                    .height = CLAY_SIZING_FIXED(20)}},
+              .backgroundColor = {255, 255, 255, 0}}) {
+          // ModeSelect child
+
+          CLAY_TEXT(MouseModeText(currentMode),
+                    CLAY_TEXT_CONFIG({.fontId = 1,
+                                      .fontSize = 20,
+                                      .textColor = {255, 255, 255, 255}}));
+
+          bool modeMenuVisible =
+              Clay_PointerOver(Clay_GetElementId(CLAY_STRING("ModeSelect"))) ||
+              Clay_PointerOver(Clay_GetElementId(CLAY_STRING("ModeMenu")));
+
+          if (modeMenuVisible) {
+            CLAY({.id = CLAY_ID("ModeMenu"),
+                  .floating = {.attachTo = CLAY_ATTACH_TO_PARENT,
+                               .attachPoints =
+                                   {.parent = CLAY_ATTACH_POINT_LEFT_BOTTOM}},
+                  .layout = {.padding = {0, 0, 0, 8}}}) {
+              CLAY({.layout = {.layoutDirection = CLAY_TOP_TO_BOTTOM,
+                               .sizing = {.width = CLAY_SIZING_FIXED(200)},
+                               .childAlignment = {CLAY_ALIGN_X_CENTER,
+                                                  CLAY_ALIGN_Y_CENTER}},
+                    .backgroundColor = {40, 40, 40, 255}}) {
+                // drop down item for mode is here
+                RenderDropdownMenuItem(CLAY_STRING("MODE 1"), mode1_menu_func);
+                RenderDropdownMenuItem(CLAY_STRING("MODE 2"), mode2_menu_func);
+              }
+            }
+          }
+        }
+      }
 
       // RIGHT CONTAINER
       CLAY(.wrapped = {
                .id = CLAY_ID("RightContainer"),
                .layout = {.sizing = {CLAY_SIZING_GROW(), CLAY_SIZING_GROW()},
                           .layoutDirection = CLAY_TOP_TO_BOTTOM},
-               .backgroundColor = {190, 0, 0, 255}}) {}
+               .backgroundColor = {190, 0, 0, 255}}) {
+        switch (currentPage) {
+        case TEST:
+          draw_test_screen();
+          break;
+        case PAGE_DPI:
+          draw_dpi_screen();
+          break;
+        case PAGE_LED:
+          draw_led_screen();
+          break;
+        case PAGE_SBTN:
+          draw_sbtn_screen();
+          break;
+        }
+      }
     }
 
     // FOOTER
@@ -169,26 +349,33 @@ Clay_RenderCommandArray build_layout() {
              .layout = {.sizing = {CLAY_SIZING_GROW(), CLAY_SIZING_FIXED(30)},
                         .childAlignment = {CLAY_ALIGN_X_CENTER,
                                            CLAY_ALIGN_Y_CENTER},
-                        .childGap = 16,
-                        .padding = CLAY_PADDING_ALL(16)},
+                        .childGap = 10,
+                        .padding = {10, 10, 3, 3},
+                        .layoutDirection = CLAY_LEFT_TO_RIGHT},
              .backgroundColor = {190, 0, 0, 255}}) {
+
       // children go here
+
+      RenderFooterBtn(CLAY_STRING("TEST"), test_btn);
+      RenderFooterBtn(CLAY_STRING("DPI MODES"), dpi_btn);
+      RenderFooterBtn(CLAY_STRING("LED MODES"), led_btn);
+      RenderFooterBtn(CLAY_STRING("SIDE BUTTONS"), sbtn_btn);
     }
 
-  } // end Main
+  } // end of Root
 
   return Clay_EndLayout();
 }
 
 int main(int argc, char **argv) {
   // if(argc <= 3) {
-  //     printf("bla bla bla");
+  //     printf("");
   //     return 0;
   // }
 
-  // int input_mode = atoi(argv[2]);
+  // int currentMode = atoi(argv[2]);
 
-  // if(strcmp(argv[1], "mode") != 0 || input_mode < 0 || input_mode > 5)
+  // if(strcmp(argv[1], "mode") != 0 || currentMode < 0 || currentMode > 5)
   // {
   //     return fprintf(stderr, "Need a valid mouse mode/%s", argv[2]);
   // }
@@ -233,18 +420,19 @@ int main(int argc, char **argv) {
   // }
 
   // // calling dispatcher of commands
-  // dispatch(commands, ARRAY_SIZE(commands), argc - 3, &argv[3], input_mode);
+  // dispatch(commands, ARRAY_SIZE(commands), argc - 3, &argv[3],
+  // currentMode);
 
   // printf("led mod1 on mode 1: %d\n", led_packets[1][11]);
   // printf("led mod1 on mode 1: %d\n", led_packets[1][13]);
 
-  // printf("rgb packets r: %d\n", led_packets[input_mode][8]);
-  // printf("rgb packets g: %d\n", led_packets[input_mode][9]);
-  // printf("rgb packets b: %d\n", led_packets[input_mode][10]);
-  // printf("led mod1: %d\n", led_packets[input_mode][11]);
-  // printf("led mod2: %d\n", led_packets[input_mode][13]);
+  // printf("rgb packets r: %d\n", led_packets[currentMode][8]);
+  // printf("rgb packets g: %d\n", led_packets[currentMode][9]);
+  // printf("rgb packets b: %d\n", led_packets[currentMode][10]);
+  // printf("led mod1: %d\n", led_packets[currentMode][11]);
+  // printf("led mod2: %d\n", led_packets[currentMode][13]);
 
-  // const mouse_config *foo = get_mode_config(input_mode - 1);
+  // const mouse_config *foo = get_mode_config(currentMode - 1);
   // mouse_config *all = all_mode_configs();
 
   // printf("led mod1: %d\n", foo->mod1);
@@ -253,8 +441,8 @@ int main(int argc, char **argv) {
   // printf("all led mode 1 mod1: %d\n", all[0].mod1);
   // printf("all led mode 1 mod2: %d\n", all[0].mod2);
 
-  // printf("all led mod1: %d\n", all[input_mode - 1].mod1);
-  // printf("all led mod2: %d\n", all[input_mode - 1].mod2);
+  // printf("all led mod1: %d\n", all[currentMode - 1].mod1);
+  // printf("all led mod2: %d\n", all[currentMode - 1].mod2);
 
   // if((errcode = libusb_release_interface(device, outInterfaceNumber))) {
   //     die("libusb_release_interface failed")
@@ -305,8 +493,8 @@ int main(int argc, char **argv) {
     // Build clay layout
     Clay_RenderCommandArray renderCommands = build_layout();
 
-    printf("Working directory: %s\n", GetWorkingDirectory());
-    printf("Exists? %d\n", FileExists("resources/img/header.png"));
+    //    printf("Working directory: %s\n", GetWorkingDirectory());
+    //   printf("Exists? %d\n", FileExists("resources/img/header.png"));
 
     // Render Stuff
     BeginDrawing();

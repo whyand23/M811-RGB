@@ -2,6 +2,7 @@
 #include "dispatcher.h"
 #include "dpi.h"
 #include "led.h"
+#include "renderers/raylib/raylib.h"
 #include "side_btn.h"
 
 #include <stdbool.h>
@@ -93,12 +94,80 @@ void led_btn(void) { currentPage = PAGE_LED; }
 void dpi_btn(void) { currentPage = PAGE_DPI; }
 void sbtn_btn(void) { currentPage = PAGE_SBTN; }
 
+typedef void (*ButtonCallback)(void);
+void handle_button_interaction(Clay_ElementId id, Clay_PointerData pointerInfo,
+                               intptr_t userData) {
+  if (pointerInfo.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME) {
+    ButtonCallback callback = (ButtonCallback)userData;
+    if (callback) {
+      callback();
+    }
+  }
+  // TODO: Handling user unapplied changes
+}
+
+typedef enum { NONE, STATE_R, STATE_G, STATE_B } LED_BOX_STATE;
+LED_BOX_STATE ledState = NONE;
+const int max_input_chars = 3;
+char red[4];
+Clay_String clay_red = {true, 3, red};
+int letterCount = 0;
+
+void UpdateRedInput(void) {
+  if (ledState != STATE_R)
+    return;
+
+  int key;
+  while ((key = GetCharPressed()) > 0) {
+    if (key >= 32 && key <= 125 && letterCount < max_input_chars) {
+      red[letterCount] = (char)key;
+      red[letterCount + 1] = '\0';
+      letterCount++;
+    }
+  }
+
+  if (IsKeyPressed(KEY_BACKSPACE)) {
+    if (letterCount > 0) {
+      letterCount--;
+      red[letterCount] = '\0';
+    }
+  }
+
+  if (IsKeyPressed(KEY_ENTER)) {
+    ledState = NONE; // done editing
+  }
+}
+
+void red_pressed(void) { ledState = STATE_R; }
+
 void draw_led_screen(void) {
+  UpdateRedInput();
+
   CLAY(
       {.layout = {.sizing = {.width = CLAY_SIZING_GROW(),
                              .height = CLAY_SIZING_GROW()},
                   .childAlignment = {CLAY_ALIGN_X_CENTER, CLAY_ALIGN_Y_CENTER}},
-       .backgroundColor = Clay_Hovered() ? ColorButtonHover : ColorButton}) {
+       .backgroundColor = {0, 0, 0, 0}}) {
+
+    CLAY({.layout = {.sizing = {.width = CLAY_SIZING_GROW(),
+                                .height = CLAY_SIZING_FIXED(20)}}}) {
+
+      CLAY_TEXT(CLAY_STRING("Red"),
+                CLAY_TEXT_CONFIG({.fontId = 1,
+                                  .fontSize = 16,
+                                  .textColor = {255, 255, 255, 255}}));
+
+      CLAY({.layout = {.sizing = {.width = CLAY_SIZING_FIXED(80),
+                                  .height = CLAY_SIZING_GROW()}},
+            .backgroundColor = {255, 255, 255, 255}}) {
+
+        Clay_OnHover(handle_button_interaction, (intptr_t)red_pressed);
+
+        CLAY_TEXT(clay_red, CLAY_TEXT_CONFIG({.fontId = 1,
+                                              .fontSize = 16,
+                                              .textColor = {0, 0, 0, 255}}));
+      }
+    }
 
     CLAY_TEXT(
         CLAY_STRING("LED"),
@@ -108,11 +177,11 @@ void draw_led_screen(void) {
 }
 
 void draw_dpi_screen(void) {
-  CLAY(
-      {.layout = {.sizing = {.width = CLAY_SIZING_GROW(),
-                             .height = CLAY_SIZING_GROW()},
-                  .childAlignment = {CLAY_ALIGN_X_CENTER, CLAY_ALIGN_Y_CENTER}},
-       .backgroundColor = Clay_Hovered() ? ColorButtonHover : ColorButton}) {
+  CLAY({.layout = {.sizing = {.width = CLAY_SIZING_GROW(),
+                              .height = CLAY_SIZING_GROW()},
+                   .childAlignment = {CLAY_ALIGN_X_LEFT, CLAY_ALIGN_Y_TOP},
+                   .layoutDirection = CLAY_TOP_TO_BOTTOM},
+        .backgroundColor = {0, 0, 0, 0}}) {
 
     CLAY_TEXT(
         CLAY_STRING("DPI"),
@@ -149,17 +218,6 @@ void draw_test_screen(void) {
   }
 }
 
-typedef void (*ButtonCallback)(void);
-void handle_button_interaction(Clay_ElementId id, Clay_PointerData pointerInfo,
-                               intptr_t userData) {
-  if (pointerInfo.state == CLAY_POINTER_DATA_PRESSED_THIS_FRAME) {
-    ButtonCallback callback = (ButtonCallback)userData;
-    if (callback) {
-      callback();
-    }
-  }
-}
-
 typedef enum { MODE_1, MODE_2, MODE_3, MODE_4, MODE_5 } MouseMode;
 
 MouseMode currentMode = MODE_1;
@@ -186,7 +244,6 @@ Clay_String MouseModeText(MouseMode input) {
 }
 
 void mode1_menu_func(void) { currentMode = MODE_1; }
-
 void mode2_menu_func(void) { currentMode = MODE_2; }
 
 void RenderDropdownMenuItem(Clay_String text, ButtonCallback callback) {
